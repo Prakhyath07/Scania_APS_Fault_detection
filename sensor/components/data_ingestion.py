@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 import os,sys
 from pandas import DataFrame
 from sensor.data_access.sensor_data import SensorData
+
 class DataIngestion:
 
     def __init__(self,data_ingestion_config:DataIngestionConfig):
