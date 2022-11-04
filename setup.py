@@ -14,7 +14,7 @@ def get_requirements()-> List:
             lines = f.readlines()
         requirement_list = [line.replace('\n', '') for line in lines]
         if "-e ." in requirement_list:
-            requirement_list.remove("- e.")
+            requirement_list.remove("-e .")
 
         return requirement_list
     except Exception as e:
@@ -25,6 +25,6 @@ setup(
     version="0.0.0",
     author="Prakhyath07",
     author_email="prakhyathb07@gmail.com",
-    packcages = find_packages(),
+    packages = find_packages(),
     install_requires = get_requirements()
     )

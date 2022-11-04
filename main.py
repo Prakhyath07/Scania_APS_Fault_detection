@@ -37,9 +37,11 @@
 #     except Exception as e:
 #         print(e)
 
+import os
 from sensor.pipeline.training_pipeline import TrainPipeline
 if __name__ == "__main__":
     try:
+        print(os.getcwd())
         TrainPipeline().run_pipeline()
     except Exception as e:
         print(e)
