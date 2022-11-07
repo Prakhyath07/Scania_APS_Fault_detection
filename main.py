@@ -82,6 +82,7 @@ def main():
         training_pipeline = TrainPipeline()
         training_pipeline.run_pipeline()
     except Exception as e:
+        TrainPipeline.is_pipeline_running = False
         print(e)
         logging.exception(e)
 
