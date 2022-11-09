@@ -7,7 +7,7 @@ from sensor.pipeline.training_pipeline import TrainPipeline
 import os
 from sensor.utils.main_utils import read_yaml_file
 from sensor.constants.training_pipeline import SAVED_MODEL_DIR
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile
 from sensor.constants.application import APP_HOST, APP_PORT
 from starlette.responses import RedirectResponse
 from uvicorn import run as app_run
@@ -16,6 +16,13 @@ from sensor.ml.model.estimator import ModelResolver,TargetValueMapping
 from sensor.utils.main_utils import load_object
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from pydantic import BaseModel
+from typing import List
+from io import BytesIO
+import pandas as pd
+from sensor.constants.training_pipeline import SCHEMA_FILE_PATH
+
+schema_config = read_yaml_file(SCHEMA_FILE_PATH)
 
 env_file_path=os.path.join(os.getcwd(),"env.yaml")
 
@@ -54,13 +61,18 @@ async def train_route():
     except Exception as e:
         return Response(f"Error Occurred! {e}")
 
-@app.get("/predict")
-async def predict_route():
+class results(BaseModel):
+    idx : int
+    prediction: str
+
+@app.post("/predict",response_model=List[results])
+async def predict_route(file: UploadFile):
     try:
         #get data from user csv file
         #conver csv file to dataframe
-
-        df=None
+        cont =await file.read()
+        df= pd.read_csv(BytesIO(cont))
+        df = df.drop(schema_config["drop_columns"],axis=1)
         model_resolver = ModelResolver(model_dir=SAVED_MODEL_DIR)
         if not model_resolver.is_model_exists():
             return Response("Model is not available")
@@ -70,11 +82,13 @@ async def predict_route():
         y_pred = model.predict(df)
         df['predicted_column'] = y_pred
         df['predicted_column'].replace(TargetValueMapping().reverse_mapping(),inplace=True)
-        
         #decide how to return file to user.
+        a= [results(idx = i, prediction=df.iloc[i,-1]) for i in range(df.shape[0])]
+        print(a)
+        return a
         
     except Exception as e:
-        raise Response(f"Error Occured! {e}")
+        raise Response(e)
 
 def main():
     try:
