@@ -88,6 +88,7 @@ def main():
         # set_env_variable(env_file_path)
         training_pipeline = TrainPipeline()
         training_pipeline.run_pipeline()
+        
     except Exception as e:
         TrainPipeline.is_pipeline_running = False
         print(e)
