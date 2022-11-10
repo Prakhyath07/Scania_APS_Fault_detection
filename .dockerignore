@@ -1,4 +1,5 @@
 artifact
+prediction_artifact
 saved_models
 venv
 docs

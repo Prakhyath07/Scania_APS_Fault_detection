@@ -4,6 +4,7 @@ import os,sys
 from sensor.logger import logging
 from sensor.pipeline import training_pipeline
 from sensor.pipeline.training_pipeline import TrainPipeline
+from sensor.pipeline.prediction_pipeline import PredictPipeline
 import os
 from sensor.utils.main_utils import read_yaml_file
 from sensor.constants.training_pipeline import SAVED_MODEL_DIR
@@ -15,14 +16,13 @@ from fastapi.responses import Response
 from sensor.ml.model.estimator import ModelResolver,TargetValueMapping
 from sensor.utils.main_utils import load_object
 from fastapi.middleware.cors import CORSMiddleware
-import os
 from pydantic import BaseModel
 from typing import List
-from io import BytesIO
 import pandas as pd
-from sensor.constants.training_pipeline import SCHEMA_FILE_PATH
+import os
 
-schema_config = read_yaml_file(SCHEMA_FILE_PATH)
+
+
 
 env_file_path=os.path.join(os.getcwd(),"env.yaml")
 
@@ -68,21 +68,14 @@ class results(BaseModel):
 @app.post("/predict",response_model=List[results])
 async def predict_route(file: UploadFile):
     try:
+        
         #get data from user csv file
         #conver csv file to dataframe
         cont =await file.read()
-        df= pd.read_csv(BytesIO(cont))
-        df = df.drop(schema_config["drop_columns"],axis=1)
-        model_resolver = ModelResolver(model_dir=SAVED_MODEL_DIR)
-        if not model_resolver.is_model_exists():
-            return Response("Model is not available")
-        
-        best_model_path = model_resolver.get_best_model_path()
-        model = load_object(file_path=best_model_path)
-        y_pred = model.predict(df)
-        df['predicted_column'] = y_pred
-        df['predicted_column'].replace(TargetValueMapping().reverse_mapping(),inplace=True)
+        predictpipeline =PredictPipeline(cont)
         #decide how to return file to user.
+        pred_artifact = predictpipeline.run_pipeline()
+        df = pd.read_csv(pred_artifact.prediction_file_path)
         a= [results(idx = i, prediction=df.iloc[i,-1]) for i in range(df.shape[0])]
         print(a)
         return a
