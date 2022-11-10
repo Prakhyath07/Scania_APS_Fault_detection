@@ -3,6 +3,7 @@ from sensor.entity.artifact_entity import PredictionArtifact
 from sensor.exception import SensorException
 import sys,os
 from sensor.logger import logging
+from sensor.cloud_storage.s3_syncer import S3Sync
 
 from io import BytesIO
 import pandas as pd
@@ -11,6 +12,7 @@ from sensor.utils.main_utils import read_yaml_file
 from sensor.constants.training_pipeline import SAVED_MODEL_DIR
 from sensor.ml.model.estimator import ModelResolver,TargetValueMapping
 from sensor.utils.main_utils import load_object
+from sensor.constants.s3_bucket import TRAINING_BUCKET_NAME
 
 
 class PredictPipeline:
@@ -18,6 +20,7 @@ class PredictPipeline:
         self.prediction_pipeline_config = PredictionPipelineConfig()
         self.schema_config = read_yaml_file(SCHEMA_FILE_PATH)
         self.input_data = input_data
+        self.s3_sync = S3Sync()
         
 
 
@@ -55,6 +58,14 @@ class PredictPipeline:
 
         return pred_df
 
+    def sync_artifact_dir_to_s3(self):
+        try:
+            aws_bucket_url = f"s3://{TRAINING_BUCKET_NAME}/artifact/{self.prediction_pipeline_config.timestamp}"
+            self.s3_sync.sync_folder_to_s3(folder = self.prediction_pipeline_config.artifact_dir,aws_bucket_url=aws_bucket_url)
+        except Exception as e:
+            raise SensorException(e,sys)
+            
+
 
     def run_pipeline(self):
         try:
@@ -71,8 +82,13 @@ class PredictPipeline:
                 prediction_file_path= self.prediction_pipeline_config.pred_file_path
 
             )
+            
+            self.sync_artifact_dir_to_s3()
+            
+            
 
             return pred_artifact
 
         except  Exception as e:
+            self.sync_artifact_dir_to_s3()
             raise  SensorException(e,sys)
